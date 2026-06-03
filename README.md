@@ -1,0 +1,1 @@
+# fastapi_docker_template
