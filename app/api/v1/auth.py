@@ -4,7 +4,7 @@ from app.background.tasks import send_welcome_email
 from app.core.responses import success_response
 from app.dependencies.auth import get_current_active_user, get_user_service
 from app.models.user import User
-from app.schemas.auth import LoginRequest, LogoutRequest, RefreshRequest, TokenResponse
+from app.schemas.auth import LoginRequest, LogoutRequest, RefreshRequest
 from app.schemas.user import UserCreate, UserResponse
 from app.services.user import UserService
 
@@ -33,11 +33,9 @@ async def login(
     data: LoginRequest,
     service: UserService = Depends(get_user_service),
 ):
-    access_token, refresh_token = await service.authenticate(data.email, data.password)
+    token = await service.authenticate(data.email, data.password)
     return success_response(
-        data=TokenResponse(
-            access_token=access_token, refresh_token=refresh_token
-        ).model_dump(),
+        data=token.model_dump(),
         message="Login successful",
     )
 
@@ -47,11 +45,9 @@ async def refresh_tokens(
     data: RefreshRequest,
     service: UserService = Depends(get_user_service),
 ):
-    access_token, refresh_token = await service.refresh_tokens(data.refresh_token)
+    token = await service.refresh_tokens(data.refresh_token)
     return success_response(
-        data=TokenResponse(
-            access_token=access_token, refresh_token=refresh_token
-        ).model_dump(),
+        data=token.model_dump(),
         message="Tokens refreshed",
     )
 

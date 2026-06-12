@@ -16,6 +16,7 @@ from app.core.exceptions import (
 )
 from app.models.user import User
 from app.repositories.user import UserRepository
+from app.schemas.auth import TokenResponse
 from app.schemas.user import UserUpdate
 from app.utils.pagination import PaginationParams, build_pagination_meta
 
@@ -41,7 +42,7 @@ class UserService:
             hashed_password=hash_password(password),
         )
 
-    async def authenticate(self, email: str, password: str) -> tuple[str, str]:
+    async def authenticate(self, email: str, password: str) -> TokenResponse:
         user = await self._repo.get_by_email(email)
         if not user or not verify_password(password, user.hashed_password):
             raise InvalidCredentialsException()
@@ -49,7 +50,7 @@ class UserService:
             raise InactiveUserException()
         return await self._issue_tokens(str(user.id))
 
-    async def refresh_tokens(self, refresh_token: str) -> tuple[str, str]:
+    async def refresh_tokens(self, refresh_token: str) -> TokenResponse:
         payload = decode_token(refresh_token)
         if payload.get("type") != "refresh":
             raise InvalidTokenException("Not a refresh token")
@@ -62,7 +63,8 @@ class UserService:
         await redis_delete(_refresh_key(jti))
         return await self._issue_tokens(payload["sub"])
 
-    async def logout(self, refresh_token: str) -> None:
+    @staticmethod
+    async def logout(refresh_token: str) -> None:
         try:
             payload = decode_token(refresh_token)
             jti = payload.get("jti")
@@ -129,9 +131,10 @@ class UserService:
         if not deleted:
             raise NotFoundException("User not found")
 
-    async def _issue_tokens(self, user_id: str) -> tuple[str, str]:
+    @staticmethod
+    async def _issue_tokens(user_id: str) -> TokenResponse:
         access_token = create_access_token(subject=user_id)
         refresh_token, jti = create_refresh_token(subject=user_id)
         ttl = settings.REFRESH_TOKEN_EXPIRE_DAYS * 86400
         await redis_set(_refresh_key(jti), {"user_id": user_id}, ttl=ttl)
-        return access_token, refresh_token
+        return TokenResponse(access_token=access_token, refresh_token=refresh_token)
