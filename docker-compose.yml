@@ -1,0 +1,76 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      APP_ENV: development
+      DEBUG: "true"
+      DB_HOST: postgres
+      DB_PORT: "5432"
+      DB_NAME: app_db
+      DB_USER: app_user
+      DB_PASSWORD: app_password
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      LOG_FORMAT: console
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "scripts/migrate.sh &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+    environment:
+      APP_ENV: development
+      DB_HOST: postgres
+      REDIS_HOST: redis
+    depends_on:
+      - app
+    command: arq app.background.worker.WorkerSettings
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: app_db
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: app_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d app_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres_data:
+  redis_data:
