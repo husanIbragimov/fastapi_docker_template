@@ -8,7 +8,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1
 
-COPY pyproject.toml ./
+COPY ../pyproject.toml ./
 RUN pip install --upgrade pip && \
     pip install \
         "fastapi[standard]>=0.115.0" \
@@ -37,7 +37,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
 COPY --from=builder /usr/local/bin /usr/local/bin
 
-COPY . .
+COPY .. .
 
 RUN chmod +x scripts/*.sh
 

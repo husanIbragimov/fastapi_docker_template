@@ -42,7 +42,7 @@ def cache(ttl: int = 300, namespace: str = "") -> Callable:
                     return json.loads(cached)
 
                 result = await func(*args, **kwargs)
-                await redis.setex(key, ttl, json.dumps(result, default=str))
+                await redis.set(key, json.dumps(result, default=str), ex=ttl)
                 return result
             except Exception as exc:
                 logger.warning("cache_error", func=func.__qualname__, error=str(exc))

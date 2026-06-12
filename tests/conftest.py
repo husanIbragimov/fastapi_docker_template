@@ -1,11 +1,10 @@
-import os
 import uuid
 from collections.abc import AsyncGenerator
 
-import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.pool import NullPool
 
 from app.auth.password import hash_password
 from app.core.config import settings
@@ -14,13 +13,14 @@ from app.db.session import get_db
 from app.main import app
 from app.models.user import User
 
-# Use a dedicated test database so tests never touch production data
+# Use a dedicated test database — NullPool avoids connection-pool state
+# across tests and sidesteps the asyncpg greenlet-ping issue on Python 3.14.
 _TEST_DB_NAME = "test_" + settings.DB_NAME
 TEST_DB_URL = settings.DATABASE_URL.replace(
     f"/{settings.DB_NAME}", f"/{_TEST_DB_NAME}"
 )
 
-test_engine = create_async_engine(TEST_DB_URL, echo=False, pool_pre_ping=True)
+test_engine = create_async_engine(TEST_DB_URL, echo=False, poolclass=NullPool)
 TestSessionFactory = async_sessionmaker(
     test_engine, expire_on_commit=False, class_=AsyncSession
 )

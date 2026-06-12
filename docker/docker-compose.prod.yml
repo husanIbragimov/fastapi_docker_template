@@ -3,12 +3,12 @@ version: "3.9"
 services:
   app:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     env_file:
-      - .env
+      - ../.env
     environment:
       APP_ENV: production
       LOG_FORMAT: json
@@ -23,22 +23,26 @@ services:
       resources:
         limits:
           memory: 512M
+    networks:
+      - template_shared_network
 
   worker:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
     env_file:
-      - .env
+      - ../.env
     depends_on:
       - app
     command: arq app.background.worker.WorkerSettings
     restart: unless-stopped
+    networks:
+      - template_shared_network
 
   postgres:
     image: postgres:16-alpine
     env_file:
-      - .env
+      - ../.env
     environment:
       POSTGRES_DB: ${DB_NAME:-app_db}
       POSTGRES_USER: ${DB_USER:-app_user}
@@ -51,6 +55,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - template_shared_network
 
   redis:
     image: redis:7-alpine
@@ -62,7 +68,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - template_shared_network
 
 volumes:
   postgres_data:
   redis_data:
+
+
+networks:
+  template_shared_network:
+    driver: bridge

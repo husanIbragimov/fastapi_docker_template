@@ -34,7 +34,7 @@ async def redis_set(key: str, value: Any, ttl: int | None = None) -> None:
     client = await get_redis()
     serialized = json.dumps(value, default=str)
     if ttl:
-        await client.setex(key, ttl, serialized)
+        await client.set(key, serialized, ex=ttl)
     else:
         await client.set(key, serialized)
 

@@ -3,7 +3,7 @@ version: "3.9"
 services:
   app:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
@@ -28,10 +28,12 @@ services:
     command: >
       sh -c "scripts/migrate.sh &&
              uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
+    networks:
+      - template_shared_network
 
   worker:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile
     volumes:
       - .:/app
@@ -42,6 +44,8 @@ services:
     depends_on:
       - app
     command: arq app.background.worker.WorkerSettings
+    networks:
+      - template_shared_network
 
   postgres:
     image: postgres:16-alpine
@@ -58,11 +62,13 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+    networks:
+      - template_shared_network
 
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -70,7 +76,14 @@ services:
       interval: 5s
       timeout: 3s
       retries: 5
+    networks:
+      - template_shared_network
 
 volumes:
   postgres_data:
   redis_data:
+
+
+networks:
+  template_shared_network:
+    driver: bridge

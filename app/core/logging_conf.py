@@ -4,8 +4,6 @@ from typing import Any
 
 import structlog
 
-from structlog.typing import BindableLogger
-
 
 def setup_logging(log_level: str = "INFO", log_format: str = "console") -> None:
     shared_processors: list[Any] = [
@@ -30,7 +28,6 @@ def setup_logging(log_level: str = "INFO", log_format: str = "console") -> None:
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
-        wrapper_class=BindableLogger,
     )
 
     logging.basicConfig(
